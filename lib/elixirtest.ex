@@ -7,14 +7,16 @@ defmodule Elixirtest.CLI do
   end
 
   defp parse_args(args) do
-    {opts, word, _} =
+    {opts, _, _} =
       args
-      |> OptionParser.parse(switches: [upcase: :boolean])
+      # |> OptionParser.parse(aliases: [u: :upcase], switches: [upcase: :boolean])
+      |> OptionParser.parse(aliases: [n: :name, d: :desc, a: :author, V: :vendor, v: :version, f: :files, F: :files_to_load],
+      switches: [name: :string, desc: :string, author: :string, vendor: :string, version: :string, files: :string, files_to_load: :string])
 
-    {opts, List.to_string(word)}
+    opts
   end
 
-  defp response({opts, word}) do
-    if opts[:upcase], do: String.upcase(word), else: word
+  defp response(opts) do
+    IO.puts opts
   end
 end
