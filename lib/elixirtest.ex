@@ -3,6 +3,7 @@ defmodule Elixirtest.CLI do
     args
     |> parse_args()
     |> check_args()
+    # |> check_files_exist()
     |> response()
     |> IO.puts()
   end
@@ -23,9 +24,16 @@ defmodule Elixirtest.CLI do
       |> check_exists(opts[:desc], "Description is required")
       |> check_exists(opts[:author], "Author is required")
       |> check_exists(opts[:vendor], "Vendor is required")
-      # |> check_version(opts[:version])
-    IO.puts errors
-    {:ok, opts}
+      |> check_exists(opts[:files], "Files is required")
+      |> check_exists(opts[:files_to_load], "Files to load is required")
+      |> check_version(opts[:version])
+    files = String.split(opts[:files], ",")
+    files_to_load = String.split(opts[:files_to_load], ",")
+    status = cond do
+      length(errors) > 0 -> :error
+      true -> :ok
+    end
+    {status, Keyword.merge(opts, [files: files, files_to_load: files_to_load])}
   end
 
   defp response({status, opts}) do
@@ -38,6 +46,14 @@ defmodule Elixirtest.CLI do
       nil -> errors ++ [error_message]
       "" -> errors ++ [error_message]
       _ -> errors
+    end
+  end
+
+  def check_version(errors, version) do
+    cond do
+      version === :nil -> errors ++ ["Version is required"]
+      version =~ ~r{^\d+\.\d+\.\d+$}-> errors
+      true -> errors ++ ["Version must be in the format x.y.z"]
     end
   end
 
