@@ -32,13 +32,19 @@ defmodule Elixirtest.CLI do
     Enum.each(opts[:files], fn file -> File.copy(Path.join([cwd_result, file]), Path.join([cwd_result, 'static-web', opts[:name], file])) end)
 
     mani = String.to_charlist "Manifest.json"
-    {zip_status, zip_error} = :zip.create("elixirtest.zip", [String.to_charlist("Manifest.json"), String.to_charlist("static-web")])
+    filename = "#{opts[:name]}_#{String.replace(opts[:version], ".", "_")}.zip"
+    IO.puts filename
+    {zip_status, zip_error} = :zip.create(filename, [String.to_charlist("Manifest.json"), String.to_charlist("static-web")])
 
     File.rm("Manifest.json")
     File.rm_rf(Path.join([cwd_result, 'static-web']))
-    IO.puts json_status
-    IO.puts json_result
-    IO.puts file_status
+    IO.puts "json_status #{json_status}"
+    IO.puts "json_result #{json_result}"
+    IO.puts "file_status #{file_status}"
+    IO.puts "cwd_status #{cwd_status}"
+    IO.puts "cwd_result #{cwd_result}"
+    IO.puts "zip_status #{zip_status}"
+    IO.puts "zip_error #{zip_error}"
   end
 
   defp check_files_exist({status, opts}) do
