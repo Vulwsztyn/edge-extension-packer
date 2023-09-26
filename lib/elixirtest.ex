@@ -1,14 +1,13 @@
+require IEx
 defmodule EdgeExtensionPacker.CLI do
   def main(args \\ []) do
-#    require IEx
-#    IEx.pry
     args
     |> parse_args()
-    |> my_bind(&check_args/1)
+    |> my_bind(&get_cwd/1)
+    |> my_bind(&check_args_by_subcommand/1)
     |> my_bind(&check_files_exist/1)
     |> my_bind(&create_json_in_memory/1)
     |> my_bind(&create_manifest_json/1)
-    |> my_bind(&get_cwd/1)
     |> my_bind(&mkdir_static_web/1)
     |> my_bind(&copy_files/1)
     |> my_bind(&create_zip/1)
@@ -160,6 +159,49 @@ defmodule EdgeExtensionPacker.CLI do
     end
   end
 
+  defp check_args_by_subcommand(obj) do
+    cond do
+      obj.subcommand === ["bump"] ->
+        check_args_bump(obj)
+        |> check_args()
+      true ->
+        check_args(obj)
+    end
+  end
+
+  defp check_args_bump(obj) do
+    zip_filename = obj.opts[:zip_filename] || get_latest_zip(obj)
+    :zip.unzip(to_charlist(zip_filename), [{:cwd, to_charlist(obj.cwd)}])
+    json = Jason.decode!(File.read!("Manifest.json"))
+    opts = obj.opts
+    [zip_head | _ ] = String.split(zip_filename, "_")
+    files = File.ls!(Path.join([obj.cwd, "static-web", zip_head]))
+    Map.put(obj, :opts, Keyword.merge(
+      [
+      version: json["version"],
+      name: json["name"],
+      desc: json["description"],
+      vendor: json["vendor"],
+      author: json["creator"],
+      vendor_desc: json["vendorDescription"],
+      files: Enum.join(files, ","),
+      files_to_load: Enum.join(json["preloadedScripts"], ","),
+      ],opts
+    ))
+  end
+
+  defp get_latest_zip(obj) do
+    cwd = obj.cwd
+    files = File.ls!(cwd)
+    zip_files = Enum.filter(files, fn x -> x =~ ~r{\d+_\d+_\d+\.zip$} end)
+    zip_files
+    |> Enum.map(&{&1, File.stat!(Path.join(cwd, &1)).ctime})
+    |> Enum.sort(fn {_, time1}, {_, time2} -> time1 > time2 end)
+    |> hd()
+    |> elem(0)
+  end
+
+
   defp check_args(obj) do
     opts = obj.opts
     errors =
@@ -187,7 +229,6 @@ defmodule EdgeExtensionPacker.CLI do
   defp parse_args(args) do
     {opts, word, _} =
       args
-      # |> OptionParser.parse(aliases: [u: :upcase], switches: [upcase: :boolean])
       |> OptionParser.parse(
         aliases: [
           n: :name,
@@ -212,7 +253,7 @@ defmodule EdgeExtensionPacker.CLI do
           zip_filename: :string
         ]
       )
-    {:ok, %{opts: opts}}
+    {:ok, %{opts: opts, subcommand: word}}
   end
 
   def check_exists(errors, opt, error_message) do
