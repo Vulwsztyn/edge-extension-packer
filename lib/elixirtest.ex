@@ -1,4 +1,4 @@
-defmodule Elixirtest.CLI do
+defmodule EdgeExtensionPacker.CLI do
   def main(args \\ []) do
     args
     |> parse_args()

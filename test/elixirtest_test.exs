@@ -1,8 +1,8 @@
-defmodule ElixirtestTest do
+defmodule EdgeExtensionPackerTest do
   use ExUnit.Case
-  doctest Elixirtest
+  doctest EdgeExtensionPacker
 
   test "greets the world" do
-    assert Elixirtest.hello() == :world
+    assert EdgeExtensionPacker.hello() == :world
   end
 end

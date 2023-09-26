@@ -1,4 +1,4 @@
-defmodule Elixirtest.MixProject do
+defmodule EdgeExtensionPacker.MixProject do
   use Mix.Project
 
   def project do
@@ -29,6 +29,6 @@ defmodule Elixirtest.MixProject do
   end
 
   defp escript do
-    [main_module: Elixirtest.CLI]
+    [main_module: EdgeExtensionPacker.CLI]
   end
 end
