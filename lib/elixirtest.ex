@@ -1,10 +1,11 @@
 defmodule EdgeExtensionPacker.CLI do
   def main(args \\ []) do
+#    require IEx
+#    IEx.pry
     args
     |> parse_args()
-    |> check_args()
+    |> my_bind(&check_args/1)
     |> my_bind(&check_files_exist/1)
-    |> my_bind(&pack_opts_into_map/1)
     |> my_bind(&create_json_in_memory/1)
     |> my_bind(&create_manifest_json/1)
     |> my_bind(&get_cwd/1)
@@ -147,18 +148,20 @@ defmodule EdgeExtensionPacker.CLI do
     end
   end
 
-  defp check_files_exist(opts) do
+  defp check_files_exist(obj) do
+    opts = obj.opts
     files_exist = Enum.all?(opts[:files], fn file -> File.exists?(file) end)
     files_to_load_exist = Enum.all?(opts[:files_to_load], fn file -> File.exists?(file) end)
 
     cond do
       files_exist == false -> {:error, ["Files do not exist"]}
       files_to_load_exist == false -> {:error, ["Files to load do not exist"]}
-      true -> {:ok, opts}
+      true -> {:ok, obj}
     end
   end
 
-  defp check_args(opts) do
+  defp check_args(obj) do
+    opts = obj.opts
     errors =
       []
       |> check_exists(opts[:name], "Name is required")
@@ -177,7 +180,7 @@ defmodule EdgeExtensionPacker.CLI do
       true ->
         files = String.split(opts[:files], ",")
         files_to_load = String.split(opts[:files_to_load], ",")
-        {:ok, Keyword.merge(opts, files: files, files_to_load: files_to_load)}
+        {:ok, Map.put(obj, :opts, Keyword.merge(opts, files: files, files_to_load: files_to_load))}
     end
   end
 
@@ -194,7 +197,8 @@ defmodule EdgeExtensionPacker.CLI do
           v: :version,
           D: :vendor_desc,
           f: :files,
-          F: :files_to_load
+          F: :files_to_load,
+          z: :zip_filename
         ],
         switches: [
           name: :string,
@@ -204,12 +208,11 @@ defmodule EdgeExtensionPacker.CLI do
           vendor_desc: :string,
           version: :string,
           files: :string,
-          files_to_load: :string
+          files_to_load: :string,
+          zip_filename: :string
         ]
       )
-
-    IO.puts(word)
-    opts
+    {:ok, %{opts: opts}}
   end
 
   def check_exists(errors, opt, error_message) do
@@ -235,10 +238,6 @@ defmodule EdgeExtensionPacker.CLI do
       :ok -> {:ok, Map.put(args, :cwd, cwd_result)}
       :error -> {:error, "Error getting cwd"}
     end
-  end
-
-  defp pack_opts_into_map(opts) do
-    {:ok, %{opts: opts}}
   end
 
   defp my_bind({status, rest}, fun) do
