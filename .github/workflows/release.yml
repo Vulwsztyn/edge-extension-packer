@@ -15,6 +15,8 @@ jobs:
         with:
           otp-version: '24.0'
           elixir-version: '1.15.0'
+      - name: Install dependencies
+        run: mix deps.get
       - name: Build
         run: mix escript.build
       - name: Release
