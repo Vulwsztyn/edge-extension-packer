@@ -178,7 +178,7 @@ defmodule EdgeExtensionPacker.CLI do
     files = File.ls!(Path.join([obj.cwd, "static-web", zip_head]))
     Map.put(obj, :opts, Keyword.merge(
       [
-      version: json["version"],
+      version: version_bump(json["version"]),
       name: json["name"],
       desc: json["description"],
       vendor: json["vendor"],
@@ -188,6 +188,11 @@ defmodule EdgeExtensionPacker.CLI do
       files_to_load: Enum.join(json["preloadedScripts"], ","),
       ],opts
     ))
+  end
+
+  defp version_bump(str) do
+    [major, minor, patch] = String.split(str, ".")
+    [major, minor, String.to_integer(patch) + 1] |> Enum.join(".")
   end
 
   defp get_latest_zip(obj) do
