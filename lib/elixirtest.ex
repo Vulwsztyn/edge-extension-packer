@@ -1,4 +1,5 @@
 require IEx
+
 defmodule EdgeExtensionPacker.CLI do
   def main(args \\ []) do
     args
@@ -76,7 +77,10 @@ defmodule EdgeExtensionPacker.CLI do
       Enum.reduce(files, {:ok, 1}, fn file, acc ->
         case acc do
           {:ok, _} ->
-            case File.copy(file, Path.join([cwd, ~c"static-web", opts[:name], file])) do
+            case File.copy(
+                   Path.join([obj.cwd, opts[:path], file]),
+                   Path.join([cwd, ~c"static-web", opts[:name], file])
+                 ) do
               {:ok, _} -> acc
               {:error, error_code} -> {:error, "Error copying #{file} - #{error_code}"}
             end
@@ -149,12 +153,12 @@ defmodule EdgeExtensionPacker.CLI do
 
   defp check_files_exist(obj) do
     opts = obj.opts
-    files_exist = Enum.all?(opts[:files], fn file -> File.exists?(file) end)
-    files_to_load_exist = Enum.all?(opts[:files_to_load], fn file -> File.exists?(file) end)
+
+    files_exist =
+      Enum.all?(opts[:files], fn file -> File.exists?(Path.join([obj.cwd, opts[:path], file])) end)
 
     cond do
       files_exist == false -> {:error, ["Files do not exist"]}
-      files_to_load_exist == false -> {:error, ["Files to load do not exist"]}
       true -> {:ok, obj}
     end
   end
@@ -164,30 +168,74 @@ defmodule EdgeExtensionPacker.CLI do
       obj.subcommand === ["bump"] ->
         check_args_bump(obj)
         |> check_args()
+
       true ->
         check_args(obj)
     end
   end
 
   defp check_args_bump(obj) do
-    zip_filename = obj.opts[:zip_filename] || get_latest_zip(obj)
-    :zip.unzip(to_charlist(zip_filename), [{:cwd, to_charlist(obj.cwd)}])
-    json = Jason.decode!(File.read!("Manifest.json"))
+    get_zip_filename(obj)
+    |> my_bind(&unzip/1)
+    |> my_bind(&get_json_from_manifest/1)
+    |> my_bind(&get_files_in_static_web/1)
+    |> my_bind(&create_opts_from_unzipped/1)
+  end
+
+  defp create_opts_from_unzipped(obj) do
     opts = obj.opts
-    [zip_head | _ ] = String.split(zip_filename, "_")
-    files = File.ls!(Path.join([obj.cwd, "static-web", zip_head]))
-    Map.put(obj, :opts, Keyword.merge(
-      [
-      version: version_bump(json["version"]),
-      name: json["name"],
-      desc: json["description"],
-      vendor: json["vendor"],
-      author: json["creator"],
-      vendor_desc: json["vendorDescription"],
-      files: Enum.join(files, ","),
-      files_to_load: Enum.join(json["preloadedScripts"], ","),
-      ],opts
-    ))
+    json = obj.json
+    files = obj.files
+
+    Map.put(
+      obj,
+      :opts,
+      Keyword.merge(
+        [
+          version: version_bump(json["version"]),
+          name: json["name"],
+          desc: json["description"],
+          vendor: json["vendor"],
+          author: json["creator"],
+          vendor_desc: json["vendorDescription"],
+          files: Enum.join(files, ","),
+          files_to_load: Enum.join(json["preloadedScripts"], ",")
+        ],
+        opts
+      )
+    )
+  end
+
+  defp get_files_in_static_web(obj) do
+    obj
+    |> Map.get(:zip_filename)
+    |> String.split("_")
+    |> hd()
+    |> (fn x -> Path.join([obj.cwd, "static-web", x]) end).()
+    |> File.ls()
+    |> my_bind(fn x -> {:ok, Map.put(obj, :files, x)} end)
+  end
+
+  defp get_json_from_manifest(obj) do
+    obj
+    |> unzip()
+    |> my_bind(fn _ -> File.read("Manifest.json") end)
+    |> my_bind(&Jason.decode/1)
+    |> my_bind(fn x -> {:ok, Map.put(obj, :json, x)} end)
+  end
+
+  defp unzip(obj) do
+    case :zip.unzip(to_charlist(obj.zip_filename), [{:cwd, to_charlist(obj.cwd)}]) do
+      {:ok, _} -> {:ok, obj}
+      {:error, error_code} -> {:error, "Error unzipping #{obj.zip_filename} - #{error_code}"}
+    end
+  end
+
+  defp get_zip_filename(obj) do
+    case obj.opts[:zip_filename] do
+      nil -> get_latest_zip(obj)
+      _ -> {:ok, Map.put(obj, :zip_filename, obj.opts[:zip_filename])}
+    end
   end
 
   defp version_bump(str) do
@@ -198,17 +246,25 @@ defmodule EdgeExtensionPacker.CLI do
   defp get_latest_zip(obj) do
     cwd = obj.cwd
     files = File.ls!(cwd)
-    zip_files = Enum.filter(files, fn x -> x =~ ~r{\d+_\d+_\d+\.zip$} end)
-    zip_files
-    |> Enum.map(&{&1, File.stat!(Path.join(cwd, &1)).ctime})
-    |> Enum.sort(fn {_, time1}, {_, time2} -> time1 > time2 end)
-    |> hd()
-    |> elem(0)
-  end
+    zip_files = Enum.filter(files, fn x -> x =~ ~r{_\d+_\d+_\d+\.zip$} end)
 
+    cond do
+      length(zip_files) == 0 ->
+        {:error, "No zip files matching abc_x_y_z.zip found"}
+
+      true ->
+        zip_files
+        |> Enum.map(&{&1, File.stat!(Path.join(cwd, &1)).ctime})
+        |> Enum.sort(fn {_, time1}, {_, time2} -> time1 > time2 end)
+        |> hd()
+        |> elem(0)
+        |> (fn x -> {:ok, Map.put(obj, :zip_filename, x)} end).()
+    end
+  end
 
   defp check_args(obj) do
     opts = obj.opts
+
     errors =
       []
       |> check_exists(opts[:name], "Name is required")
@@ -227,7 +283,14 @@ defmodule EdgeExtensionPacker.CLI do
       true ->
         files = String.split(opts[:files], ",")
         files_to_load = String.split(opts[:files_to_load], ",")
-        {:ok, Map.put(obj, :opts, Keyword.merge(opts, files: files, files_to_load: files_to_load))}
+        path = opts[:path] || ~c"."
+
+        {:ok,
+         Map.put(
+           obj,
+           :opts,
+           Keyword.merge(opts, files: files, files_to_load: files_to_load, path: path)
+         )}
     end
   end
 
@@ -244,7 +307,8 @@ defmodule EdgeExtensionPacker.CLI do
           D: :vendor_desc,
           f: :files,
           F: :files_to_load,
-          z: :zip_filename
+          z: :zip_filename,
+          p: :path
         ],
         switches: [
           name: :string,
@@ -255,9 +319,11 @@ defmodule EdgeExtensionPacker.CLI do
           version: :string,
           files: :string,
           files_to_load: :string,
-          zip_filename: :string
+          zip_filename: :string,
+          path: :string
         ]
       )
+
     {:ok, %{opts: opts, subcommand: word}}
   end
 

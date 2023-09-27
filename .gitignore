@@ -24,3 +24,7 @@ edge_extension_packer-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+edge_extension_packer
+
+.idea
