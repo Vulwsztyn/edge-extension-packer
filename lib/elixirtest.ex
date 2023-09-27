@@ -167,7 +167,7 @@ defmodule EdgeExtensionPacker.CLI do
     cond do
       obj.subcommand === ["bump"] ->
         check_args_bump(obj)
-        |> check_args()
+        |> my_bind(&check_args/1)
 
       true ->
         check_args(obj)
@@ -180,6 +180,8 @@ defmodule EdgeExtensionPacker.CLI do
     |> my_bind(&get_json_from_manifest/1)
     |> my_bind(&get_files_in_static_web/1)
     |> my_bind(&create_opts_from_unzipped/1)
+    |> my_bind(&rm_static_web/1)
+    |> my_bind(&rm_manifest/1)
   end
 
   defp create_opts_from_unzipped(obj) do
@@ -187,9 +189,7 @@ defmodule EdgeExtensionPacker.CLI do
     json = obj.json
     files = obj.files
 
-    Map.put(
-      obj,
-      :opts,
+    new_opts =
       Keyword.merge(
         [
           version: version_bump(json["version"]),
@@ -199,14 +199,27 @@ defmodule EdgeExtensionPacker.CLI do
           author: json["creator"],
           vendor_desc: json["vendorDescription"],
           files: Enum.join(files, ","),
-          files_to_load: Enum.join(json["preloadedScripts"], ",")
+          files_to_load:
+            json["preloadedScripts"]
+            |> Enum.map(fn x -> Path.basename(x) end)
+            |> Enum.join(",")
         ],
         opts
       )
-    )
+
+    IO.puts("opts determined from contents of #{obj.zip_filename}: #{inspect(new_opts)}")
+
+    {:ok,
+     Map.put(
+       obj,
+       :opts,
+       new_opts
+     )}
   end
 
   defp get_files_in_static_web(obj) do
+    IO.puts("Getting files in static-web")
+
     obj
     |> Map.get(:zip_filename)
     |> String.split("_")
@@ -217,6 +230,8 @@ defmodule EdgeExtensionPacker.CLI do
   end
 
   defp get_json_from_manifest(obj) do
+    IO.puts("Getting json from Manifest.json")
+
     obj
     |> unzip()
     |> my_bind(fn _ -> File.read("Manifest.json") end)
@@ -225,6 +240,8 @@ defmodule EdgeExtensionPacker.CLI do
   end
 
   defp unzip(obj) do
+    IO.puts("Unzipping #{obj.zip_filename}")
+
     case :zip.unzip(to_charlist(obj.zip_filename), [{:cwd, to_charlist(obj.cwd)}]) do
       {:ok, _} -> {:ok, obj}
       {:error, error_code} -> {:error, "Error unzipping #{obj.zip_filename} - #{error_code}"}
