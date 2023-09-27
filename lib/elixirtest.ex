@@ -222,7 +222,7 @@ defmodule EdgeExtensionPacker.CLI do
 
     cond do
       length(errors) > 0 ->
-        {:error, errors}
+        {:error, Enum.join(errors, "\n")}
 
       true ->
         files = String.split(opts[:files], ",")
