@@ -1,20 +1,56 @@
 # EdgeExtensionPacker
 
-**TODO: Add description**
+## Usage
 
-## Installation
+### "Normal"
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `edge_extension_packer` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:edge_extension_packer, "~> 0.1.0"}
-  ]
-end
+```
+edge_extension_packer 
+    --name <your_extension_name> 
+    --desc <your_extension_description> 
+    --author <your_name> 
+    --vendor <vendor_name> 
+    --vendor_desc <vendor_description> 
+    --version <version> 
+    --files <comma_separated_files_you_want_zipped> 
+    --files_to_load <comma_separated_subset_of_files_you_want_preloaded> 
+    --path <path_to_dir_with files_to_be_zipped> # if other than cwd
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/edge_extension_packer>.
+### bump
+In order not to repeat yourself you can use `bump` that will increment the patch in version and create a new zip.
+
+Why? You might change one line of code, build your Web Component, and want to quickly create a new zip.
+
+
+```
+edge_extension_packer bump 
+    --zip_filename <zip_filename> # optional - if not given the progrma will use the newset zip with name mathing `abc_x_y_z.zip`
+    --path <path_to_dir_with files_to_be_zipped> # if other than cwd
+```
+
+All the info will be taken from `Manifest.json` and files will be the same as in the zip.
+
+If you want to change anything while 
+
+### Aliases
+
+```
+          n: :name,
+          d: :desc,
+          a: :author,
+          V: :vendor,
+          v: :version,
+          D: :vendor_desc,
+          f: :files,
+          F: :files_to_load,
+          z: :zip_filename,
+          p: :path
+
+```
+
+## Local debugging with pry
+
+`iex -S mix run`
+
+`EdgeExtensionPacker.CLI.main(String.split("-n test -d asd -a Artur -v Arturro -v 1.2.6 -f index.js -F index.js -V vendorro -D vendesc", " "))`
