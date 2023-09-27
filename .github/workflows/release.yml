@@ -1,0 +1,23 @@
+name: Main
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.15.0'
+      - name: Build
+        run: mix escript.build
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            edge_extension_packer
