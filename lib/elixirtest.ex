@@ -120,7 +120,7 @@ defmodule EdgeExtensionPacker.CLI do
           description: opts[:desc],
           creator: opts[:author],
           creationDate: :os.system_time(:millisecond),
-          preloadedScripts: opts[:files_to_load]
+          preloadedScripts: Enum.map(opts[:files_to_load], fn x -> "#{opts[:name]}/#{x}" end)
         },
         escape: :json,
         pretty: true
