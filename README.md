@@ -2,6 +2,12 @@
 
 ## Usage
 
+### Requirements
+
+`brew install elixir`
+
+### How to use?
+
 Download the `edge_extension_packer` from [releases](https://github.com/Vulwsztyn/edge-extension-packer/releases) 
 e.g. with `wget` and put it into one of dirs in your `PATH` e.g. `/usr/local/bin`.
 
