@@ -58,7 +58,17 @@ If you want to change anything while
 
 ```
 
-## Local debugging with pry
+## Local run
+
+`mix deps.get`
+
+create dir `dist` put some dummy files (e.g. `index.js` & `style.css`) there and run
+
+` mix escript.build && ./edge_extension_packer -n my_pkg_name -d my_pkg_desc -a me -V my_vendor -D my_vendor_desc -f index.js,style.css -F index.js,style.css -p dist -v 1.0.1`
+
+### Local debugging with pry
+
+
 
 `iex -S mix run`
 
