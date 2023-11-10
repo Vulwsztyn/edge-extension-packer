@@ -78,7 +78,7 @@ defmodule EdgeExtensionPacker.CLI do
         case acc do
           {:ok, _} ->
             case File.copy(
-                   Path.join([obj.cwd, opts[:path], file]),
+                   Path.join([opts[:path], file]),
                    Path.join([cwd, ~c"static-web", opts[:name], file])
                  ) do
               {:ok, _} -> acc
@@ -155,7 +155,7 @@ defmodule EdgeExtensionPacker.CLI do
     opts = obj.opts
 
     nonexistent_files =
-      Enum.filter(opts[:files], fn file -> !File.exists?(Path.join([obj.cwd, opts[:path], file])) end)
+      Enum.filter(opts[:files], fn file -> !File.exists?(Path.join([opts[:path], file])) end)
 
     cond do
       nonexistent_files != [] -> {:error, ["Files do not exist: #{Enum.join(nonexistent_files, ",")}"]}
