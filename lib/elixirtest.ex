@@ -154,11 +154,11 @@ defmodule EdgeExtensionPacker.CLI do
   defp check_files_exist(obj) do
     opts = obj.opts
 
-    files_exist =
-      Enum.all?(opts[:files], fn file -> File.exists?(Path.join([obj.cwd, opts[:path], file])) end)
+    nonexistent_files =
+      Enum.filter(opts[:files], fn file -> !File.exists?(Path.join([obj.cwd, opts[:path], file])) end)
 
     cond do
-      files_exist == false -> {:error, ["Files do not exist"]}
+      nonexistent_files != [] -> {:error, ["Files do not exist: #{Enum.join(nonexistent_files, ",")}"]}
       true -> {:ok, obj}
     end
   end
