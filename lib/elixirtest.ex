@@ -6,6 +6,7 @@ defmodule EdgeExtensionPacker.CLI do
     |> parse_args()
     |> my_bind(&get_cwd/1)
     |> my_bind(&check_args_by_subcommand/1)
+    |> my_bind(&check_dir_exists/1)
     |> my_bind(&check_files_exist/1)
     |> my_bind(&create_json_in_memory/1)
     |> my_bind(&create_manifest_json/1)
@@ -148,6 +149,15 @@ defmodule EdgeExtensionPacker.CLI do
     case file_status do
       :ok -> {:ok, obj}
       {:error, error_code} -> {:error, "Error writing Manifest.json - #{error_code}"}
+    end
+  end
+
+  defp check_dir_exists(obj) do
+    opts = obj.opts
+
+    cond do
+      !File.exists?(opts[:path]) -> {:error, ["Dir does not exist: #{opts[:path]}"]}
+      true -> {:ok, obj}
     end
   end
 
